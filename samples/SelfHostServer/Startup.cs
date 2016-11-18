@@ -50,6 +50,7 @@ namespace SelfHostServer
         {
             var host = new WebHostBuilder()
                 .UseStartup<Startup>()
+                .UseUrls("http://localhost:8080")
                 .UseWebListener(options =>
                 {
                     options.ListenerSettings.Authentication.Schemes = AuthenticationSchemes.None;

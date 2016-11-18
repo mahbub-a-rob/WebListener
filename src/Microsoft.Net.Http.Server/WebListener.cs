@@ -76,7 +76,14 @@ namespace Microsoft.Net.Http.Server
 
                 _urlGroup = new UrlGroup(_serverSession, Logger);
 
-                _requestQueue = new RequestQueue(_urlGroup, Logger);
+                if (Settings.AttachToExistingRequestQueue)
+                {
+                    _requestQueue = new RequestQueue(Settings.RequestQueueName, Logger);
+                }
+                else
+                {
+                    _requestQueue = new RequestQueue(_urlGroup, Settings.RequestQueueName, Logger);
+                }
 
                 _disconnectListener = new DisconnectListener(_requestQueue, Logger);
             }
@@ -147,22 +154,25 @@ namespace Microsoft.Net.Http.Server
                         return;
                     }
 
-                    Settings.Authentication.SetUrlGroupSecurity(UrlGroup);
-                    Settings.Timeouts.SetUrlGroupTimeouts(UrlGroup);
-                    Settings.SetRequestQueueLimit(RequestQueue);
-
-                    _requestQueue.AttachToUrlGroup();
-
-                    // All resources are set up correctly. Now add all prefixes.
-                    try
+                    if (!Settings.AttachToExistingRequestQueue)
                     {
-                        Settings.UrlPrefixes.RegisterAllPrefixes(UrlGroup);
-                    }
-                    catch (WebListenerException)
-                    {
-                        // If an error occurred while adding prefixes, free all resources allocated by previous steps.
-                        _requestQueue.DetachFromUrlGroup();
-                        throw;
+                        Settings.Authentication.SetUrlGroupSecurity(UrlGroup);
+                        Settings.Timeouts.SetUrlGroupTimeouts(UrlGroup);
+                        Settings.SetRequestQueueLimit(RequestQueue);
+
+                        _requestQueue.AttachToUrlGroup();
+
+                        // All resources are set up correctly. Now add all prefixes.
+                        try
+                        {
+                            Settings.UrlPrefixes.RegisterAllPrefixes(UrlGroup);
+                        }
+                        catch (WebListenerException)
+                        {
+                            // If an error occurred while adding prefixes, free all resources allocated by previous steps.
+                            _requestQueue.DetachFromUrlGroup();
+                            throw;
+                        }
                     }
 
                     _state = State.Started;
